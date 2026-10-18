@@ -58,20 +58,24 @@ def get_effective_config(cli_sets: list[str]) -> dict:
             for key, value in yaml_config.items():
                 config[normalized_key(key)] = value
 
-    # Layer 3: .env values. Read without injecting them into the OS environment.
+    # Layer 3: .env file
     dotenv_path = Path(".env")
     dotenv_config = dotenv_values(dotenv_path) if dotenv_path.exists() else {}
+
     for raw_key, value in dotenv_config.items():
         if value is None:
             continue
+
         key = normalized_key(raw_key)
+
+        # The only specified .env alias
         if key == "num_workers":
             key = "workers"
-        elif key.startswith("app_"):
-            key = key[4:]
+
         config[key] = value
 
-    # Layer 4: actual OS environment variables with APP_ prefix.
+    # Layer 4: OS environment variables with APP_ prefix.
+    # This layer must override values from .env.
     for raw_key, value in os.environ.items():
         if raw_key.upper().startswith("APP_"):
             key = normalized_key(raw_key[4:])
